@@ -1,0 +1,73 @@
+{
+  "name": "voice-typer-desktop",
+  "version": "1.0.0",
+  "description": "Voice Typer — تطبيق سطح مكتب حديث لتحويل الصوت إلى نص يعمل عبر أيقونة Tray",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "keywords": [
+    "voice",
+    "speech-to-text",
+    "electron",
+    "desktop",
+    "tray",
+    "arabic",
+    "dictation"
+  ],
+  "author": "Voice Typer Team",
+  "license": "MIT",
+  "dependencies": {
+    "clipboardy": "^4.0.0",
+    "electron": "^28.0.0",
+    "speech-to-text": "^3.0.2"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.voicetyper.desktop",
+    "productName": "Voice Typer",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/app-icon.ico",
+      "publish": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Voice Typer"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  }
+}

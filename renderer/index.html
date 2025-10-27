@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Typer - محول الصوت إلى نص</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-app-region: drag;
+        }
+
+        button, input, .no-drag {
+            -webkit-app-region: no-drag;
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+
+        .listening-ring {
+            animation: listening-ring 1.5s ease-in-out infinite;
+        }
+
+        @keyframes listening-ring {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .transcript-box {
+            max-height: 200px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea transparent;
+        }
+
+        .transcript-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .transcript-box::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .transcript-box::-webkit-scrollbar-thumb {
+            background-color: #667eea;
+            border-radius: 20px;
+        }
+
+        .mic-button {
+            transition: all 0.3s ease;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+        }
+
+        .mic-button:active {
+            transform: scale(0.95);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        .status-ready {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .status-listening {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .slide-down {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="m-0 p-0 overflow-hidden">
+    <div class="w-full h-screen flex items-center justify-center p-4">
+        <div class="glassmorphism rounded-3xl shadow-2xl w-full max-w-md slide-down">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-3xl p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <svg class="w-8 h-8 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                        <h1 class="text-2xl font-bold">Voice Typer</h1>
+                    </div>
+                    <button id="closeBtn" class="no-drag hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-sm opacity-90">محول صوتي ذكي مع لصق تلقائي</p>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6">
+                <!-- Status -->
+                <div class="text-center mb-6">
+                    <div class="flex items-center justify-center mb-2">
+                        <span id="statusText" class="text-lg font-semibold text-gray-700">جاهز للاستماع</span>
+                        <span id="statusIndicator" class="status-indicator status-ready"></span>
+                    </div>
+                    <p class="text-sm text-gray-500" id="helpText">اضغط على المايك أو استخدم Ctrl+Alt+M</p>
+                </div>
+
+                <!-- Microphone Button -->
+                <div class="flex justify-center mb-6">
+                    <button id="micButton" class="mic-button no-drag relative">
+                        <div class="w-24 h-24 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all">
+                            <svg id="micIcon" class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                            </svg>
+                        </div>
+                        <div id="listeningRing" class="absolute inset-0 bg-red-500 opacity-0 rounded-full" style="z-index: -1;"></div>
+                    </button>
+                </div>
+
+                <!-- Transcript Box -->
+                <div class="bg-gray-50 rounded-2xl p-4 mb-4 border-2 border-gray-200">
+                    <div class="flex items-center mb-2">
+                        <svg class="w-5 h-5 text-purple-600 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-sm font-semibold text-gray-700">النص المحول</span>
+                    </div>
+                    <div id="transcript" class="transcript-box text-gray-700 min-h-[100px] leading-relaxed">
+                        <span class="text-gray-400 italic">النص سيظهر هنا...</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3">
+                    <button id="clearBtn" class="no-drag flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center">
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        مسح
+                    </button>
+                    <button id="copyBtn" class="no-drag flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center">
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        نسخ
+                    </button>
+                </div>
+
+                <!-- Info -->
+                <div class="mt-4 text-center text-xs text-gray-500">
+                    <p>⌨️ اختصار سريع: <span class="font-bold text-purple-600">Ctrl+Alt+M</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعادة تفعيل Web Speech API مؤقتًا
+        let recognition = null;
+        let isListening = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        // عناصر DOM
+        const micButton = document.getElementById('micButton');
+        const micIcon = document.getElementById('micIcon');
+        const listeningRing = document.getElementById('listeningRing');
+        const statusText = document.getElementById('statusText');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const helpText = document.getElementById('helpText');
+        const transcript = document.getElementById('transcript');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const closeBtn = document.getElementById('closeBtn');
+
+        function initSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                transcript.innerHTML = '<span class="text-red-500 font-semibold">❌ متصفحك لا يدعم تقنية تحويل الصوت إلى نص</span>';
+                return false;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ar-SA';
+            recognition.maxAlternatives = 1;
+            recognition.onstart = function() {
+                statusText.textContent = 'يستمع الآن...';
+                statusIndicator.classList.remove('status-ready');
+                statusIndicator.classList.add('status-listening');
+                helpText.textContent = 'تحدث الآن...';
+                listeningRing.classList.add('listening-ring');
+                listeningRing.style.opacity = '0.3';
+                micButton.classList.add('listening-ring');
+            };
+            recognition.onresult = function(event) {
+                interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcriptText + ' ';
+                        if (window.voiceAPI && window.voiceAPI.sendFinalText) {
+                            window.voiceAPI.sendFinalText(transcriptText.trim());
+                        }
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+                updateTranscript();
+            };
+            recognition.onerror = function(event) {
+                helpText.textContent = `خطأ: ${event.error}`;
+            };
+            recognition.onend = function() {
+                if (isListening) {
+                    recognition.start();
+                } else {
+                    statusText.textContent = 'جاهز للاستماع';
+                    statusIndicator.classList.remove('status-listening');
+                    statusIndicator.classList.add('status-ready');
+                    helpText.textContent = 'اضغط على المايك أو استخدم Ctrl+Alt+M';
+                    listeningRing.classList.remove('listening-ring');
+                    listeningRing.style.opacity = '0';
+                    micButton.classList.remove('listening-ring');
+                }
+            };
+            return true;
+        }
+
+        function updateTranscript() {
+            let html = finalTranscript;
+            if (interimTranscript) {
+                html += '<span class="text-gray-400 italic">' + interimTranscript + '</span>';
+            }
+            if (html.trim() === '') {
+                html = '<span class="text-gray-400 italic">النص سيظهر هنا...</span>';
+            }
+            transcript.innerHTML = html;
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        function toggleListening() {
+            if (!recognition && !initSpeechRecognition()) {
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+                isListening = false;
+            } else {
+                finalTranscript = '';
+                interimTranscript = '';
+                updateTranscript();
+                recognition.start();
+                isListening = true;
+            }
+        }
+
+        function clearTranscript() {
+            finalTranscript = '';
+            interimTranscript = '';
+            updateTranscript();
+        }
+
+        copyBtn.addEventListener('click', async () => {
+            const text = finalTranscript.trim();
+            if (!text) {
+                helpText.textContent = 'لا يوجد نص للنسخ';
+                setTimeout(() => {
+                    helpText.textContent = 'اضغط على المايك أو استخدم Ctrl+Alt+M';
+                }, 2000);
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(text);
+                helpText.textContent = '✓ تم النسخ بنجاح';
+                setTimeout(() => {
+                    helpText.textContent = 'اضغط على المايك أو استخدم Ctrl+Alt+M';
+                }, 2000);
+            } catch (err) {
+                console.error('فشل النسخ:', err);
+            }
+        });
+
+        micButton.addEventListener('click', toggleListening);
+        clearBtn.addEventListener('click', clearTranscript);
+        closeBtn.addEventListener('click', () => {
+            if (window.voiceAPI && window.voiceAPI.hideWindow) {
+                window.voiceAPI.hideWindow();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('✓ Voice Typer loaded with Web Speech API fallback');
+        });
+    </script>
+</body>
+</html>
