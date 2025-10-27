@@ -6,12 +6,17 @@
     <title>Voice Typer - محول الصوت إلى نص</title>
     <!-- Manifest & PWA icons -->
     <link rel="manifest" href="./manifest.json">
+    <!-- أيقونات لجميع المنصات -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
     <meta name="theme-color" content="#764ba2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="./icon-192.png">
+    <meta name="msapplication-TileImage" content="./icon-192.png">
+    <meta name="msapplication-TileColor" content="#764ba2">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -162,6 +167,56 @@
                         console.log('ServiceWorker registration failed:', error);
                     });
             });
+        }
+
+        // منطق عرض رسالة التثبيت للمستخدم
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallBanner();
+        });
+
+        function showInstallBanner() {
+            // إنشاء بانر مخصص للتثبيت
+            const banner = document.createElement('div');
+            banner.id = 'pwa-install-banner';
+            banner.style.position = 'fixed';
+            banner.style.bottom = '32px';
+            banner.style.left = '50%';
+            banner.style.transform = 'translateX(-50%)';
+            banner.style.background = 'rgba(255,255,255,0.98)';
+            banner.style.boxShadow = '0 2px 16px rgba(0,0,0,0.12)';
+            banner.style.borderRadius = '18px';
+            banner.style.padding = '18px 32px';
+            banner.style.zIndex = '9999';
+            banner.style.display = 'flex';
+            banner.style.alignItems = 'center';
+            banner.innerHTML = `
+                <img src="./icon-192.png" alt="Voice Typer" style="width:48px;height:48px;margin-left:16px;border-radius:12px;box-shadow:0 0 8px #764ba2;">
+                <div style="flex:1;text-align:right;">
+                    <div style="font-size:1.1rem;font-weight:bold;color:#764ba2;">تثبيت التطبيق على جهازك</div>
+                    <div style="font-size:0.95rem;color:#333;">يمكنك الآن تثبيت Voice Typer على سطح المكتب أو الهاتف!</div>
+                </div>
+                <button id="pwa-install-btn" style="background:#764ba2;color:#fff;padding:8px 18px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin-right:16px;">تثبيت</button>
+                <button id="pwa-cancel-btn" style="background:#eee;color:#333;padding:8px 18px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">إلغاء</button>
+            `;
+            document.body.appendChild(banner);
+            document.getElementById('pwa-install-btn').onclick = function() {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('PWA installed');
+                        }
+                        deferredPrompt = null;
+                        banner.remove();
+                    });
+                }
+            };
+            document.getElementById('pwa-cancel-btn').onclick = function() {
+                banner.remove();
+            };
         }
     </script>
     <div class="w-full h-screen flex items-center justify-center p-4">
