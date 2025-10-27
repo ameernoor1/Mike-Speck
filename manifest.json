@@ -1,0 +1,21 @@
+{
+  "name": "Voice Typer PWA",
+  "short_name": "VoiceTyper",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#764ba2",
+  "theme_color": "#764ba2",
+  "description": "تطبيق ويب لتحويل الصوت إلى نص ونسخه بسهولة.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Typer PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png">
+    <meta name="theme-color" content="#764ba2">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-family: 'Cairo', sans-serif; }
+        .glassmorphism { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="glassmorphism rounded-3xl shadow-2xl w-full max-w-md p-6">
+        <h1 class="text-2xl font-bold text-center mb-4">🎤 Voice Typer</h1>
+        <div class="mb-4 text-center">
+            <span id="statusText" class="text-lg font-semibold text-gray-700">جاهز للاستماع</span>
+        </div>
+        <div class="flex justify-center mb-6">
+            <button id="micButton" class="bg-purple-600 text-white rounded-full w-20 h-20 flex items-center justify-center shadow-lg">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+            </button>
+        </div>
+        <div class="bg-gray-50 rounded-2xl p-4 mb-4 border-2 border-gray-200">
+            <div class="mb-2 font-semibold text-gray-700">النص المحول</div>
+            <div id="transcript" class="min-h-[100px] text-gray-700 leading-relaxed"><span class="text-gray-400 italic">النص سيظهر هنا...</span></div>
+        </div>
+        <div class="flex gap-3">
+            <button id="clearBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-xl">مسح</button>
+            <button id="copyBtn" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold py-3 px-4 rounded-xl">نسخ</button>
+        </div>
+        <div class="mt-4 text-center text-xs text-gray-500">⌨️ اختصار سريع: Ctrl+Alt+M</div>
+    </div>
+    <script>
+        let recognition = null;
+        let isListening = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+        const micButton = document.getElementById('micButton');
+        const statusText = document.getElementById('statusText');
+        const transcript = document.getElementById('transcript');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        function initSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                transcript.innerHTML = '<span class="text-red-500 font-semibold">❌ متصفحك لا يدعم تقنية تحويل الصوت إلى نص</span>';
+                return false;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ar-SA';
+            recognition.maxAlternatives = 1;
+            recognition.onstart = function() {
+                statusText.textContent = 'يستمع الآن...';
+            };
+            recognition.onresult = function(event) {
+                interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcriptText + ' ';
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+                updateTranscript();
+            };
+            recognition.onerror = function(event) {
+                statusText.textContent = `خطأ: ${event.error}`;
+            };
+            recognition.onend = function() {
+                if (isListening) {
+                    recognition.start();
+                } else {
+                    statusText.textContent = 'جاهز للاستماع';
+                }
+            };
+            return true;
+        }
+        function updateTranscript() {
+            let html = finalTranscript;
+            if (interimTranscript) {
+                html += '<span class="text-gray-400 italic">' + interimTranscript + '</span>';
+            }
+            if (html.trim() === '') {
+                html = '<span class="text-gray-400 italic">النص سيظهر هنا...</span>';
+            }
+            transcript.innerHTML = html;
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+        function toggleListening() {
+            if (!recognition && !initSpeechRecognition()) {
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+                isListening = false;
+            } else {
+                finalTranscript = '';
+                interimTranscript = '';
+                updateTranscript();
+                recognition.start();
+                isListening = true;
+            }
+        }
+        function clearTranscript() {
+            finalTranscript = '';
+            interimTranscript = '';
+            updateTranscript();
+        }
+        copyBtn.addEventListener('click', async () => {
+            const text = finalTranscript.trim();
+            if (!text) return;
+            try {
+                await navigator.clipboard.writeText(text);
+                statusText.textContent = '✓ تم النسخ بنجاح';
+                setTimeout(() => { statusText.textContent = 'جاهز للاستماع'; }, 2000);
+            } catch (err) {
+                statusText.textContent = 'فشل النسخ';
+            }
+        });
+        micButton.addEventListener('click', toggleListening);
+        clearBtn.addEventListener('click', clearTranscript);
+        window.addEventListener('DOMContentLoaded', () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js');
+            }
+        });
+    </script>
+</body>
+</html>
