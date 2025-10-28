@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💼 نظام إدارة الاشتراكات المتقدم | كاش برو</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.1);
+            padding: 2rem 0;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem 2rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 1rem 0;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-menu button {
+            width: 100%;
+            text-align: right;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sidebar-menu button i {
+            width: 25px;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-menu button:hover,
+        .sidebar-menu button.active {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-right: 280px;
+            padding: 2rem;
+            min-height: 100vh;
+            background: #f5f5f5;
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .stat-icon.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .stat-icon.green { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .stat-icon.orange { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .stat-icon.red { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+
+        .stat-info h3 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-info p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        /* Users Grid */
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .user-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .user-info h3 {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 0.3rem;
+        }
+
+        .user-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .user-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-item i {
+            color: #667eea;
+            width: 20px;
+        }
+
+        .detail-item span {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .subscription-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .subscription-status.active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .subscription-status.expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .subscription-status.free {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #666;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-item {
+            background: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 15px;
+        }
+
+        .info-item label {
+            display: block;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-item strong {
+            display: block;
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        /* Transactions Table */
+        .transactions-section {
+            margin-top: 2rem;
+        }
+
+        .transactions-section h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .transactions-table {
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .transactions-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .transactions-table th {
+            background: #f9fafb;
+            padding: 1rem;
+            text-align: right;
+            font-weight: 700;
+            color: #333;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .transactions-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            color: #666;
+        }
+
+        .transactions-table tr:hover {
+            background: #f9fafb;
+        }
+
+        /* Codes Section */
+        .codes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .codes-header h2 {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+        .generate-code-btn {
+            background: white;
+            color: #667eea;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .generate-code-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .codes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .code-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 5px;
+            height: 100%;
+        }
+
+        .code-card.used::before {
+            background: #ef4444;
+        }
+
+        .code-card.available::before {
+            background: #10b981;
+        }
+
+        .code-value {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            margin-bottom: 1rem;
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .code-details {
+            display: grid;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .code-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .code-detail span:first-child {
+            color: #666;
+        }
+
+        .code-detail span:last-child {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .code-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .code-status.available {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .code-status.used {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Charts */
+        .chart-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .chart-container h3 {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-bar input {
+            flex: 1;
+            border: none;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .search-bar i {
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+            color: #667eea;
+        }
+
+        .empty-state h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .loading i {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+            color: #667eea;
+        }
+
+        .loading p {
+            color: #666;
+            margin-top: 1rem;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-right: 0;
+                padding: 1rem;
+            }
+
+            .stats-grid,
+            .users-grid,
+            .codes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                max-width: 100%;
+                margin: 1rem;
+            }
+        }
+
+        /* Activity Log */
+        .activity-log {
+            background: #f9fafb;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .activity-item:hover {
+            transform: translateX(-5px);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .activity-icon.login { background: #dbeafe; color: #1e40af; }
+        .activity-icon.sale { background: #d1fae5; color: #065f46; }
+        .activity-icon.product { background: #fef3c7; color: #92400e; }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-content strong {
+            display: block;
+            color: #333;
+            margin-bottom: 0.3rem;
+        }
+
+        .activity-content span {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .activity-time {
+            color: #999;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1><i class="fas fa-crown"></i> لوحة التحكم</h1>
+            <p>نظام إدارة الاشتراكات المتقدم</p>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li>
+                <button class="tab-btn active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>لوحة المعلومات</span>
+                </button>
+            </li>
+            <li>
+                <button class="tab-btn" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i>
+                    <span>المشتركين</span>
+                </button>
+            </li>
+            <li>
+                <button class="tab-btn" onclick="switchTab('codes')">
+                    <i class="fas fa-key"></i>
+                    <span>رموز التفعيل</span>
+                </button>
+            </li>
+            <li>
+                <button class="tab-btn" onclick="switchTab('analytics')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>التحليلات</span>
+                </button>
+            </li>
+            <li>
+                <button class="tab-btn" onclick="switchTab('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </button>
+            </li>
+        </ul>
+
+        <div style="padding: 1.5rem; border-top: 2px solid #f3f4f6; margin-top: auto;">
+            <button onclick="location.href='landing.html'" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
+                <i class="fas fa-home"></i> العودة للرئيسية
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalUsers">0</h3>
+                        <p>إجمالي المشتركين</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="activeUsers">0</h3>
+                        <p>الاشتراكات النشطة</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="expiringUsers">0</h3>
+                        <p>قريبة من الانتهاء</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="expiredUsers">0</h3>
+                        <p>المنتهية</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-bar"></i> إحصائيات الاشتراكات</h3>
+                <canvas id="subscriptionsChart" style="max-height: 300px;"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-line"></i> تسجيلات المستخدمين الجدد (آخر 30 يوم)</h3>
+                <canvas id="newUsersChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="users" class="content-section">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="ابحث عن مستخدم بالاسم أو رقم الهاتف..." onkeyup="filterUsers()">
+            </div>
+
+            <div id="usersContainer" class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>جاري تحميل بيانات المشتركين...</p>
+            </div>
+        </div>
+
+        <!-- Codes Section -->
+        <div id="codes" class="content-section">
+            <div class="codes-header">
+                <h2><i class="fas fa-key"></i> رموز التفعيل</h2>
+                <button class="generate-code-btn" onclick="showGenerateCodeModal()">
+                    <i class="fas fa-plus-circle"></i>
+                    إنشاء رمز جديد
+                </button>
+            </div>
+
+            <div id="codesContainer" class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>جاري تحميل رموز التفعيل...</p>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics" class="content-section">
+            <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); margin-bottom: 2rem;">
+                <h2 style="color: #667eea; margin: 0; font-size: 2rem;">
+                    <i class="fas fa-chart-pie"></i> التحليلات المتقدمة
+                </h2>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalRevenue">0</h3>
+                        <p>إجمالي الإيرادات</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="monthlySubscriptions">0</h3>
+                        <p>الاشتراكات الشهرية</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="yearlySubscriptions">0</h3>
+                        <p>الاشتراكات السنوية</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="freeTrials">0</h3>
+                        <p>التجريبية المجانية</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-area"></i> توزيع أنواع الاشتراكات</h3>
+                <canvas id="subscriptionTypesChart" style="max-height: 350px;"></canvas>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="content-section">
+            <div class="chart-container">
+                <h3><i class="fas fa-cog"></i> إعدادات النظام</h3>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-dollar-sign"></i> سعر الاشتراك الشهري (دينار عراقي)</label>
+                    <input type="number" id="monthlyPrice" value="25000" placeholder="25000">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-crown"></i> سعر الاشتراك السنوي (دينار عراقي)</label>
+                    <input type="number" id="yearlyPrice" value="225000" placeholder="225000">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-gift"></i> مدة الفترة التجريبية (أيام)</label>
+                    <input type="number" id="trialDays" value="30" placeholder="30">
+                </div>
+
+                <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%; padding: 1.2rem; font-size: 1.1rem;">
+                    <i class="fas fa-save"></i> حفظ الإعدادات
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 id="modalUserName"></h2>
+                <p id="modalUserPhone"></p>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Code Modal -->
+    <div id="generateCodeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeGenerateCodeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2><i class="fas fa-key"></i> إنشاء رمز تفعيل جديد</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>نوع الاشتراك</label>
+                    <select id="codeType">
+                        <option value="monthly">شهري (30 يوم)</option>
+                        <option value="yearly">سنوي (365 يوم)</option>
+                        <option value="custom">مخصص</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="customDaysGroup" style="display: none;">
+                    <label>عدد الأيام (للاشتراك المخصص)</label>
+                    <input type="number" id="customDays" placeholder="90" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>عدد الرموز المطلوبة</label>
+                    <input type="number" id="codeCount" value="1" min="1" max="100">
+                </div>
+
+                <button class="btn btn-primary" onclick="generateCodes()" style="width: 100%; padding: 1.2rem; font-size: 1.1rem;">
+                    <i class="fas fa-magic"></i> إنشاء الرموز
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        let allUsers = [];
+        let allCodes = [];
+        let chartsInitialized = false;
+
+        // Switch Tabs
+        function switchTab(tabName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked button
+            event.target.closest('.tab-btn').classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'users' && allUsers.length === 0) {
+                loadUsers();
+            } else if (tabName === 'codes' && allCodes.length === 0) {
+                loadCodes();
+            } else if (tabName === 'analytics' && !chartsInitialized) {
+                initAnalytics();
+            }
+        }
+
+        // Load Dashboard Stats
+        async function loadDashboardStats() {
+            try {
+                const snapshot = await database.ref('users').once('value');
+                const users = snapshot.val() || {};
+                allUsers = Object.values(users);
+
+                const now = Date.now();
+                let active = 0, expiring = 0, expired = 0;
+
+                allUsers.forEach(user => {
+                    if (user.subscription) {
+                        const end = Number(user.subscription.end);
+                        const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+
+                        if (daysLeft > 7) {
+                            active++;
+                        } else if (daysLeft > 0 && daysLeft <= 7) {
+                            expiring++;
+                        } else {
+                            expired++;
+                        }
+                    }
+                });
+
+                document.getElementById('totalUsers').textContent = allUsers.length;
+                document.getElementById('activeUsers').textContent = active;
+                document.getElementById('expiringUsers').textContent = expiring;
+                document.getElementById('expiredUsers').textContent = expired;
+
+                // Initialize Charts
+                initCharts();
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Initialize Charts
+        function initCharts() {
+            // Subscriptions Chart
+            const subscriptionsCtx = document.getElementById('subscriptionsChart').getContext('2d');
+            new Chart(subscriptionsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['نشط', 'قريب من الانتهاء', 'منتهي'],
+                    datasets: [{
+                        data: [
+                            parseInt(document.getElementById('activeUsers').textContent),
+                            parseInt(document.getElementById('expiringUsers').textContent),
+                            parseInt(document.getElementById('expiredUsers').textContent)
+                        ],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // New Users Chart (Last 30 days)
+            const last30Days = [];
+            const userCounts = [];
+            const now = new Date();
+
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                last30Days.push(date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' }));
+                
+                const dayStart = new Date(date.setHours(0, 0, 0, 0)).getTime();
+                const dayEnd = new Date(date.setHours(23, 59, 59, 999)).getTime();
+                
+                const count = allUsers.filter(user => {
+                    const createdAt = user.createdAt || 0;
+                    return createdAt >= dayStart && createdAt <= dayEnd;
+                }).length;
+                
+                userCounts.push(count);
+            }
+
+            const newUsersCtx = document.getElementById('newUsersChart').getContext('2d');
+            new Chart(newUsersCtx, {
+                type: 'line',
+                data: {
+                    labels: last30Days,
+                    datasets: [{
+                        label: 'مستخدمين جدد',
+                        data: userCounts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load Users
+        async function loadUsers() {
+            try {
+                const container = document.getElementById('usersContainer');
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>جاري تحميل بيانات المشتركين...</p></div>';
+
+                const snapshot = await database.ref('users').once('value');
+                const users = snapshot.val() || {};
+                allUsers = Object.values(users);
+
+                if (allUsers.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-users-slash"></i>
+                            <h3>لا يوجد مشتركين بعد</h3>
+                            <p>عندما يقوم المستخدمون بالتسجيل، ستظهر بياناتهم هنا</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                displayUsers(allUsers);
+
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>حدث خطأ</h3>
+                        <p>تعذر تحميل بيانات المشتركين</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display Users
+        function displayUsers(users) {
+            const container = document.getElementById('usersContainer');
+            const now = Date.now();
+
+            let html = '<div class="users-grid">';
+
+            users.forEach(user => {
+                const subscription = user.subscription || {};
+                const end = Number(subscription.end) || 0;
+                const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+                
+                let statusClass = 'expired';
+                let statusText = 'منتهي';
+                
+                if (daysLeft > 0) {
+                    if (subscription.status === 'active') {
+                        statusClass = 'active';
+                        statusText = 'نشط';
+                    } else {
+                        statusClass = 'free';
+                        statusText = 'تجريبي';
+                    }
+                }
+
+                const initial = user.name ? user.name.charAt(0) : '؟';
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('ar-IQ') : 'لم يسجل دخول';
+                const username = user.username || 'غير محدد';
+                const accountCode = user.accountCode || 'غير محدد';
+                const storeName = user.storeName || 'غير محدد';
+
+                html += `
+                    <div class="user-card" onclick="showUserDetails('${user.userId}')">
+                        <div class="user-header">
+                            <div class="user-avatar">${initial}</div>
+                            <div class="user-info">
+                                <h3>${user.name || 'غير محدد'}</h3>
+                                <p><i class="fas fa-store"></i> ${storeName}</p>
+                                <p><i class="fas fa-phone"></i> ${user.phone || 'غير محدد'}</p>
+                            </div>
+                        </div>
+
+                        <div class="user-details">
+                            <div class="detail-item" style="background: #f3f4f6; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                                <i class="fas fa-user-circle" style="color: #667eea;"></i>
+                                <span style="font-weight: bold;">${username}</span>
+                            </div>
+                            <div class="detail-item" style="background: #e0e7ff; padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                                <i class="fas fa-key" style="color: #4f46e5;"></i>
+                                <span style="font-weight: bold; font-family: monospace;">${accountCode}</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${user.city || 'غير محدد'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>${daysLeft > 0 ? daysLeft + ' يوم' : 'منتهي'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-crown"></i>
+                                <span>${subscription.type === 'monthly' ? 'شهري' : subscription.type === 'yearly' ? 'سنوي' : 'تجريبي'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-sign-in-alt"></i>
+                                <span>${lastLogin}</span>
+                            </div>
+                        </div>
+
+                        <span class="subscription-status ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Filter Users
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(user => {
+                return (user.name && user.name.toLowerCase().includes(searchTerm)) ||
+                       (user.phone && user.phone.includes(searchTerm)) ||
+                       (user.userId && user.userId.toLowerCase().includes(searchTerm));
+            });
+            displayUsers(filtered);
+        }
+
+        // Show User Details
+        async function showUserDetails(userId) {
+            try {
+                const snapshot = await database.ref('users/' + userId).once('value');
+                const user = snapshot.val();
+
+                if (!user) {
+                    alert('المستخدم غير موجود');
+                    return;
+                }
+
+                const subscription = user.subscription || {};
+                const now = Date.now();
+                const end = Number(subscription.end) || 0;
+                const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+
+                document.getElementById('modalUserName').textContent = user.name || 'غير محدد';
+                document.getElementById('modalUserPhone').textContent = user.phone || 'غير محدد';
+
+                let modalContent = `
+                    <!-- معلومات الحساب المميزة -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem; color: white;">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.3rem;">
+                            <i class="fas fa-user-shield"></i> معلومات الحساب
+                        </h3>
+                        <div class="info-grid" style="gap: 1rem;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                                <label style="color: rgba(255,255,255,0.9); font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                    <i class="fas fa-user-circle"></i> اسم المستخدم
+                                </label>
+                                <strong style="font-size: 1.1rem; font-family: monospace; display: block;">
+                                    ${user.username || 'غير محدد'}
+                                </strong>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                                <label style="color: rgba(255,255,255,0.9); font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                    <i class="fas fa-key"></i> رمز الحساب
+                                </label>
+                                <strong style="font-size: 1.1rem; font-family: monospace; display: block;">
+                                    ${user.accountCode || 'غير محدد'}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label><i class="fas fa-id-card"></i> معرف المستخدم</label>
+                            <strong style="font-size: 0.85rem;">${user.userId}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-user"></i> الاسم الكامل</label>
+                            <strong>${user.name || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-store"></i> اسم المتجر</label>
+                            <strong>${user.storeName || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-phone"></i> رقم الهاتف</label>
+                            <strong>${user.phone || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-mobile-alt"></i> رقم الهاتف البديل</label>
+                            <strong>${user.altPhone || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-globe"></i> الدولة</label>
+                            <strong>${user.country || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-city"></i> المدينة</label>
+                            <strong>${user.city || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-road"></i> الحي / الشارع</label>
+                            <strong>${user.street || 'غير محدد'}</strong>
+                        </div>
+                        <div class="info-item">
+                            <label><i class="fas fa-calendar-plus"></i> تاريخ التسجيل</label>
+                            <strong>${user.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-IQ') : 'غير محدد'}</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 15px; margin: 2rem 0;">
+                        <h3 style="margin-bottom: 1rem; color: #333;"><i class="fas fa-crown"></i> معلومات الاشتراك</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>نوع الاشتراك</label>
+                                <strong>${subscription.type === 'monthly' ? 'شهري' : subscription.type === 'yearly' ? 'سنوي' : 'تجريبي مجاني'}</strong>
+                            </div>
+                            <div class="info-item">
+                                <label>الحالة</label>
+                                <strong style="color: ${daysLeft > 0 ? '#10b981' : '#ef4444'};">
+                                    ${daysLeft > 0 ? 'نشط' : 'منتهي'}
+                                </strong>
+                            </div>
+                            <div class="info-item">
+                                <label>الأيام المتبقية</label>
+                                <strong style="color: ${daysLeft > 7 ? '#10b981' : daysLeft > 0 ? '#f59e0b' : '#ef4444'};">
+                                    ${daysLeft > 0 ? daysLeft + ' يوم' : 'منتهي'}
+                                </strong>
+                            </div>
+                            <div class="info-item">
+                                <label>تاريخ البدء</label>
+                                <strong>${subscription.start ? new Date(subscription.start).toLocaleDateString('ar-IQ') : 'غير محدد'}</strong>
+                            </div>
+                            <div class="info-item">
+                                <label>تاريخ الانتهاء</label>
+                                <strong>${subscription.end ? new Date(subscription.end).toLocaleDateString('ar-IQ') : 'غير محدد'}</strong>
+                            </div>
+                            <div class="info-item">
+                                <label>آخر تسجيل دخول</label>
+                                <strong>${user.lastLogin ? new Date(user.lastLogin).toLocaleString('ar-IQ') : 'لم يسجل دخول'}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Load Products
+                const productsSnapshot = await database.ref('users/' + userId + '/products').once('value');
+                const products = productsSnapshot.val() || {};
+                const productsArray = Object.values(products);
+
+                if (productsArray.length > 0) {
+                    modalContent += `
+                        <div class="transactions-section">
+                            <h3><i class="fas fa-box"></i> المنتجات (${productsArray.length})</h3>
+                            <div class="transactions-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>اسم المنتج</th>
+                                            <th>الفئة</th>
+                                            <th>الكمية</th>
+                                            <th>سعر الشراء</th>
+                                            <th>سعر البيع</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    productsArray.slice(0, 10).forEach(product => {
+                        modalContent += `
+                            <tr>
+                                <td>${product.name || 'غير محدد'}</td>
+                                <td>${product.category || 'غير محدد'}</td>
+                                <td>${product.quantity || 0}</td>
+                                <td>${(product.purchasePrice || 0).toLocaleString()} د.ع</td>
+                                <td>${(product.salePrice || 0).toLocaleString()} د.ع</td>
+                            </tr>
+                        `;
+                    });
+
+                    modalContent += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Load Invoices
+                const invoicesSnapshot = await database.ref('users/' + userId + '/invoices').once('value');
+                const invoices = invoicesSnapshot.val() || {};
+                const invoicesArray = Object.values(invoices);
+
+                if (invoicesArray.length > 0) {
+                    // Calculate total sales
+                    const totalSales = invoicesArray.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+                    const todaySales = invoicesArray.filter(inv => {
+                        const invDate = new Date(inv.date).toDateString();
+                        const today = new Date().toDateString();
+                        return invDate === today;
+                    }).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+                    modalContent += `
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 15px; margin: 2rem 0;">
+                            <h3 style="margin-bottom: 1rem;"><i class="fas fa-chart-line"></i> إحصائيات المبيعات</h3>
+                            <div class="info-grid">
+                                <div class="info-item" style="background: rgba(255, 255, 255, 0.2); color: white;">
+                                    <label style="color: rgba(255, 255, 255, 0.9);">إجمالي الفواتير</label>
+                                    <strong style="color: white;">${invoicesArray.length}</strong>
+                                </div>
+                                <div class="info-item" style="background: rgba(255, 255, 255, 0.2); color: white;">
+                                    <label style="color: rgba(255, 255, 255, 0.9);">إجمالي المبيعات</label>
+                                    <strong style="color: white;">${totalSales.toLocaleString()} د.ع</strong>
+                                </div>
+                                <div class="info-item" style="background: rgba(255, 255, 255, 0.2); color: white;">
+                                    <label style="color: rgba(255, 255, 255, 0.9);">مبيعات اليوم</label>
+                                    <strong style="color: white;">${todaySales.toLocaleString()} د.ع</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="transactions-section">
+                            <h3><i class="fas fa-file-invoice-dollar"></i> آخر الفواتير</h3>
+                            <div class="transactions-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>رقم الفاتورة</th>
+                                            <th>التاريخ</th>
+                                            <th>الإجمالي</th>
+                                            <th>طريقة الدفع</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    invoicesArray.slice(-10).reverse().forEach(invoice => {
+                        modalContent += `
+                            <tr>
+                                <td>${invoice.invoiceNumber || 'غير محدد'}</td>
+                                <td>${invoice.date ? new Date(invoice.date).toLocaleString('ar-IQ') : 'غير محدد'}</td>
+                                <td style="font-weight: bold; color: #10b981;">${(invoice.total || 0).toLocaleString()} د.ع</td>
+                                <td>${invoice.paymentMethod || 'نقدي'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    modalContent += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Activity Log
+                modalContent += `
+                    <div class="activity-log">
+                        <h3 style="margin-bottom: 1rem; color: #333;"><i class="fas fa-history"></i> سجل النشاطات</h3>
+                        <div class="activity-item">
+                            <div class="activity-icon login">
+                                <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <div class="activity-content">
+                                <strong>تسجيل الدخول</strong>
+                                <span>آخر تسجيل دخول للنظام</span>
+                            </div>
+                            <div class="activity-time">
+                                ${user.lastLogin ? new Date(user.lastLogin).toLocaleString('ar-IQ') : 'لم يسجل'}
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon product">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="activity-content">
+                                <strong>المنتجات</strong>
+                                <span>إجمالي المنتجات المضافة</span>
+                            </div>
+                            <div class="activity-time">
+                                ${productsArray.length}
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon sale">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="activity-content">
+                                <strong>المبيعات</strong>
+                                <span>إجمالي عمليات البيع</span>
+                            </div>
+                            <div class="activity-time">
+                                ${invoicesArray.length}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalBody').innerHTML = modalContent;
+                document.getElementById('userModal').classList.add('active');
+
+            } catch (error) {
+                console.error('Error loading user details:', error);
+                alert('حدث خطأ في تحميل بيانات المستخدم');
+            }
+        }
+
+        // Close User Modal
+        function closeUserModal() {
+            document.getElementById('userModal').classList.remove('active');
+        }
+
+        // Load Codes
+        async function loadCodes() {
+            try {
+                const container = document.getElementById('codesContainer');
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>جاري تحميل رموز التفعيل...</p></div>';
+
+                const snapshot = await database.ref('subscriptionCodes').once('value');
+                const codes = snapshot.val() || {};
+                allCodes = Object.entries(codes).map(([code, data]) => ({ code, ...data }));
+
+                if (allCodes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-key"></i>
+                            <h3>لا توجد رموز تفعيل</h3>
+                            <p>قم بإنشاء رموز تفعيل جديدة للمشتركين</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="codes-grid">';
+
+                allCodes.forEach(codeData => {
+                    const isUsed = codeData.used || false;
+                    const statusClass = isUsed ? 'used' : 'available';
+                    const statusText = isUsed ? 'مستخدم' : 'متاح';
+                    const typeText = codeData.type === 'monthly' ? 'شهري (30 يوم)' : 
+                                    codeData.type === 'yearly' ? 'سنوي (365 يوم)' : 
+                                    `مخصص (${codeData.days} يوم)`;
+
+                    html += `
+                        <div class="code-card ${statusClass}">
+                            <div class="code-value">${codeData.code}</div>
+                            <div class="code-details">
+                                <div class="code-detail">
+                                    <span>النوع:</span>
+                                    <span>${typeText}</span>
+                                </div>
+                                <div class="code-detail">
+                                    <span>الحالة:</span>
+                                    <span class="code-status ${statusClass}">${statusText}</span>
+                                </div>
+                                ${isUsed ? `
+                                    <div class="code-detail">
+                                        <span>مستخدم بواسطة:</span>
+                                        <span>${codeData.usedBy || 'غير محدد'}</span>
+                                    </div>
+                                    <div class="code-detail">
+                                        <span>تاريخ الاستخدام:</span>
+                                        <span>${codeData.usedAt ? new Date(codeData.usedAt).toLocaleDateString('ar-IQ') : 'غير محدد'}</span>
+                                    </div>
+                                ` : `
+                                    <div class="code-detail">
+                                        <span>تاريخ الإنشاء:</span>
+                                        <span>${codeData.createdAt ? new Date(codeData.createdAt).toLocaleDateString('ar-IQ') : 'غير محدد'}</span>
+                                    </div>
+                                `}
+                            </div>
+                            ${!isUsed ? `
+                                <button class="btn btn-secondary" onclick="deleteCode('${codeData.code}')" style="width: 100%; margin-top: 1rem;">
+                                    <i class="fas fa-trash"></i> حذف
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading codes:', error);
+                document.getElementById('codesContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>حدث خطأ</h3>
+                        <p>تعذر تحميل رموز التفعيل</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Show Generate Code Modal
+        function showGenerateCodeModal() {
+            document.getElementById('generateCodeModal').classList.add('active');
+            
+            // Show/hide custom days input
+            document.getElementById('codeType').addEventListener('change', function() {
+                document.getElementById('customDaysGroup').style.display = 
+                    this.value === 'custom' ? 'block' : 'none';
+            });
+        }
+
+        // Close Generate Code Modal
+        function closeGenerateCodeModal() {
+            document.getElementById('generateCodeModal').classList.remove('active');
+        }
+
+        // Generate Codes
+        async function generateCodes() {
+            const type = document.getElementById('codeType').value;
+            const count = parseInt(document.getElementById('codeCount').value) || 1;
+            const customDays = type === 'custom' ? parseInt(document.getElementById('customDays').value) : 0;
+
+            if (type === 'custom' && (!customDays || customDays < 1)) {
+                alert('يرجى إدخال عدد أيام صحيح للاشتراك المخصص');
+                return;
+            }
+
+            if (count < 1 || count > 100) {
+                alert('يرجى إدخال عدد رموز بين 1 و 100');
+                return;
+            }
+
+            try {
+                const updates = {};
+                const generatedCodes = [];
+
+                for (let i = 0; i < count; i++) {
+                    const code = generateRandomCode();
+                    generatedCodes.push(code);
+                    
+                    updates[`subscriptionCodes/${code}`] = {
+                        code: code,
+                        type: type,
+                        days: type === 'custom' ? customDays : (type === 'monthly' ? 30 : 365),
+                        used: false,
+                        createdAt: Date.now()
+                    };
+                }
+
+                await database.ref().update(updates);
+
+                alert(`تم إنشاء ${count} رمز تفعيل بنجاح!\n\nالرموز:\n${generatedCodes.join('\n')}`);
+
+                closeGenerateCodeModal();
+                loadCodes();
+
+            } catch (error) {
+                console.error('Error generating codes:', error);
+                alert('حدث خطأ في إنشاء الرموز');
+            }
+        }
+
+        // Generate Random Code
+        function generateRandomCode() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 12; i++) {
+                if (i > 0 && i % 4 === 0) code += '-';
+                code += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return code;
+        }
+
+        // Delete Code
+        async function deleteCode(code) {
+            if (!confirm(`هل أنت متأكد من حذف الرمز ${code}؟`)) {
+                return;
+            }
+
+            try {
+                await database.ref('subscriptionCodes/' + code).remove();
+                alert('تم حذف الرمز بنجاح');
+                loadCodes();
+            } catch (error) {
+                console.error('Error deleting code:', error);
+                alert('حدث خطأ في حذف الرمز');
+            }
+        }
+
+        // Initialize Analytics
+        function initAnalytics() {
+            chartsInitialized = true;
+
+            // Calculate statistics
+            const monthly = allUsers.filter(u => u.subscription && u.subscription.type === 'monthly').length;
+            const yearly = allUsers.filter(u => u.subscription && u.subscription.type === 'yearly').length;
+            const free = allUsers.filter(u => !u.subscription || u.subscription.type === 'free').length;
+
+            const monthlyRevenue = monthly * 25000;
+            const yearlyRevenue = yearly * 225000;
+            const totalRevenue = monthlyRevenue + yearlyRevenue;
+
+            document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString() + ' د.ع';
+            document.getElementById('monthlySubscriptions').textContent = monthly;
+            document.getElementById('yearlySubscriptions').textContent = yearly;
+            document.getElementById('freeTrials').textContent = free;
+
+            // Subscription Types Chart
+            const ctx = document.getElementById('subscriptionTypesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['التجريبية المجانية', 'الاشتراك الشهري', 'الاشتراك السنوي'],
+                    datasets: [{
+                        label: 'عدد المشتركين',
+                        data: [free, monthly, yearly],
+                        backgroundColor: [
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Save Settings
+        function saveSettings() {
+            const monthlyPrice = document.getElementById('monthlyPrice').value;
+            const yearlyPrice = document.getElementById('yearlyPrice').value;
+            const trialDays = document.getElementById('trialDays').value;
+
+            localStorage.setItem('monthlyPrice', monthlyPrice);
+            localStorage.setItem('yearlyPrice', yearlyPrice);
+            localStorage.setItem('trialDays', trialDays);
+
+            alert('تم حفظ الإعدادات بنجاح!');
+        }
+
+        // Initialize on load
+        window.addEventListener('load', function() {
+            loadDashboardStats();
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('userModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeUserModal();
+            }
+        });
+
+        document.getElementById('generateCodeModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeGenerateCodeModal();
+            }
+        });
+    </script>
+</body>
+</html>
